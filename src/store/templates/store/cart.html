@@ -1,0 +1,53 @@
+{% extends 'store/base.html' %}
+
+{% block title %}Carrito{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Tu Carrito de Compras</h2>
+
+{% if cart_items %}
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio Unitario</th>
+                    <th>Subtotal</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in cart_items %}
+                <tr>
+                    <td>{{ item.product.name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>${{ item.product.price }}</td>
+                    <td>${{ item.subtotal }}</td>
+                    <td>
+                        <a href="{% url 'remove_from_cart' item.product.id %}" class="btn btn-danger btn-sm">
+                            Eliminar
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                    <td colspan="2"><strong>${{ total }}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
+        <a href="{% url 'product_list' %}" class="btn btn-secondary me-md-2">Seguir Comprando</a>
+        <a href="{% url 'create_order' %}" class="btn btn-success">Realizar Pedido</a>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <p class="mb-0">Tu carrito está vacío. <a href="{% url 'product_list' %}">Ver productos</a></p>
+    </div>
+{% endif %}
+{% endblock %}

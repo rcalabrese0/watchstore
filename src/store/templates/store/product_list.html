@@ -1,0 +1,29 @@
+{% extends 'store/base.html' %}
+
+{% block title %}Productos{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Nuestros Relojes</h2>
+
+<div class="row row-cols-1 row-cols-md-3 g-4">
+    {% for product in products %}
+    <div class="col">
+        <div class="card h-100">
+            {% if product.image %}
+                <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}">
+            {% endif %}
+            <div class="card-body">
+                <h5 class="card-title">{{ product.name }}</h5>
+                <p class="card-text">{{ product.description }}</p>
+                <p class="card-text"><strong>Precio: ${{ product.price }}</strong></p>
+                <a href="{% url 'add_to_cart' product.id %}" class="btn btn-primary">Agregar al Carrito</a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <p class="text-center">No hay productos disponibles.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

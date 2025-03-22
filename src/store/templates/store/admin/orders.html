@@ -1,0 +1,59 @@
+{% extends 'store/base.html' %}
+
+{% block title %}Administración de Pedidos{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Administración de Pedidos</h2>
+
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Orden #</th>
+                <th>Cliente</th>
+                <th>Fecha</th>
+                <th>Total</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>{{ order.id }}</td>
+                <td>{{ order.customer.email }}</td>
+                <td>{{ order.created_at|date:"d/m/Y H:i" }}</td>
+                <td>${{ order.total }}</td>
+                <td>
+                    <span class="badge {% if order.status == 'pending' %}bg-warning{% elif order.status == 'in_process' %}bg-info{% else %}bg-success{% endif %}">
+                        {{ order.get_status_display }}
+                    </span>
+                </td>
+                <td>
+                    <div class="btn-group">
+                        <form method="post" action="{% url 'admin_update_order' order.id %}" class="me-2">
+                            {% csrf_token %}
+                            <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                                <option value="">Cambiar estado</option>
+                                {% for status, label in order.STATUS_CHOICES %}
+                                    <option value="{{ status }}" {% if status == order.status %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                        <a href="{% url 'order_pdf' order.id %}" class="btn btn-primary btn-sm" target="_blank">
+                            Ver PDF
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center">No hay pedidos registrados.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+<!-- Modal para actualizar estado -->
+<div class="modal fade" id="updateOrderModal{{ order.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Actualizar Pedido #{{ order.id }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'admin_update_order' order.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="status{{ order.id }}" class="form-label">Estado del Pedido</label>
+                        <select name="status" id="status{{ order.id }}" class="form-select">
+                            <option value="">Seleccionar estado...</option>
+                            <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Pendiente</option>
+                            <option value="confirmed" {% if order.status == 'confirmed' %}selected{% endif %}>Confirmado</option>
+                            <option value="in_process" {% if order.status == 'in_process' %}selected{% endif %}>En Proceso</option>
+                            <option value="ready" {% if order.status == 'ready' %}selected{% endif %}>Listo para Entregar</option>
+                            <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>Completado</option>
+                            <option value="cancelled" {% if order.status == 'cancelled' %}selected{% endif %}>Cancelado</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes{{ order.id }}" class="form-label">Notas</label>
+                        <textarea name="notes" id="notes{{ order.id }}" class="form-control" rows="3"
+                                placeholder="Agregar notas sobre el cambio de estado...">{{ order.notes }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
