@@ -5,6 +5,8 @@
 {% block content %}
 <h2 class="mb-4">Tu Carrito de Compras</h2>
 
+{% csrf_token %}
+
 {% if cart_items %}
     <div class="table-responsive">
         <table class="table table-striped">
@@ -43,11 +45,46 @@
     
     <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
         <a href="{% url 'product_list' %}" class="btn btn-secondary me-md-2">Seguir Comprando</a>
-        <a href="{% url 'create_order' %}" class="btn btn-success">Realizar Pedido</a>
+        <button onclick="createOrder()" class="btn btn-success">Realizar Pedido</button>
     </div>
 {% else %}
     <div class="alert alert-info">
         <p class="mb-0">Tu carrito está vacío. <a href="{% url 'product_list' %}">Ver productos</a></p>
     </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function createOrder() {
+    try {
+        const response = await fetch("{% url 'create_order' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Abrir el PDF en una nueva ventana
+            const width = 800;
+            const height = 600;
+            const left = (screen.width - width) / 2;
+            const top = (screen.height - height) / 2;
+            window.open("{% url 'order_pdf' 0 %}".replace('0', data.order_id), '_blank', 
+                `width=${width},height=${height},left=${left},top=${top}`);
+            
+            // Redirigir a la página correspondiente
+            window.location.href = data.redirect_url;
+        } else {
+            alert(data.error || 'Error al crear el pedido');
+        }
+    } catch (error) {
+        alert('Error al procesar el pedido');
+        console.error(error);
+    }
+}
+</script>
 {% endblock %}

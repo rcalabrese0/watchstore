@@ -5,6 +5,15 @@
 {% block content %}
 <h2 class="mb-4">Administración de Pedidos</h2>
 
+<div class="row mb-4">
+    <div class="col-md-6">
+        <form method="get" class="d-flex">
+            <input type="text" name="q" class="form-control me-2" placeholder="Buscar pedidos..." value="{{ search_query }}">
+            <button type="submit" class="btn btn-primary">Buscar</button>
+        </form>
+    </div>
+</div>
+
 <div class="table-responsive">
     <table class="table table-striped">
         <thead>
@@ -42,9 +51,9 @@
                                 {% endfor %}
                             </select>
                         </form>
-                        <a href="{% url 'order_pdf' order.id %}" class="btn btn-primary btn-sm" target="_blank">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="openPdfWindow({{ order.id }})">
                             Ver PDF
-                        </a>
+                        </button>
                     </div>
                 </td>
             </tr>
@@ -56,4 +65,17 @@
         </tbody>
     </table>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openPdfWindow(orderId) {
+    const url = "{% url 'order_pdf' 0 %}".replace('0', orderId);
+    const width = 800;
+    const height = 600;
+    const left = (screen.width - width) / 2;
+    const top = (screen.height - height) / 2;
+    window.open(url, '_blank', `width=${width},height=${height},left=${left},top=${top}`);
+}
+</script>
 {% endblock %}

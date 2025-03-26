@@ -14,7 +14,7 @@ urlpatterns = [
     path('order/create/', views.create_order, name='create_order'),
     path('order/<int:order_id>/pdf/', views.order_pdf, name='order_pdf'),
     
-    # Admin views
-    path('admin/orders/', views.admin_orders, name='admin_orders'),
-    path('admin/order/<int:order_id>/update/', views.admin_update_order, name='admin_update_order'),
+    # Dashboard views (previously admin views)
+    path('dashboard/orders/', views.admin_orders, name='admin_orders'),
+    path('dashboard/order/<int:order_id>/update/', views.admin_update_order, name='admin_update_order'),
 ]

@@ -1,11 +1,11 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Customer, Product, Order, OrderItem
+from .models import Customer, Product, Order, OrderItem, Brand, Category
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('email', 'dni', 'phone', 'date_joined', 'is_staff')
-    search_fields = ('email', 'dni', 'phone')
+    list_display = ('username', 'email', 'dni', 'is_staff')
+    search_fields = ('username', 'email', 'dni')
     list_filter = ('is_staff', 'is_active', 'date_joined')
     ordering = ('-date_joined',)
     fieldsets = (
@@ -17,11 +17,35 @@ class CustomerAdmin(admin.ModelAdmin):
         }),
     )
 
+@admin.register(Brand)
+class BrandAdmin(admin.ModelAdmin):
+    list_display = ('name', 'active')
+    search_fields = ('name',)
+    list_filter = ('active',)
+
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'brand', 'parent', 'active')
+    list_filter = ('brand', 'active', 'parent')
+    search_fields = ('name', 'brand__name')
+    autocomplete_fields = ['parent', 'brand']
+    
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "parent":
+            if request.resolver_match.kwargs.get('object_id'):
+                # Excluir la categoría actual y sus descendientes al editar
+                category = Category.objects.get(pk=request.resolver_match.kwargs['object_id'])
+                kwargs["queryset"] = Category.objects.exclude(
+                    pk__in=[category.pk] + list(category.children.values_list('pk', flat=True))
+                )
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'price', 'active', 'show_image')
-    list_filter = ('active',)
-    search_fields = ('name', 'description')
+    list_display = ('name', 'brand', 'category', 'price', 'stock', 'active', 'show_image')
+    list_filter = ('brand', 'category', 'active')
+    search_fields = ('name', 'sku', 'brand__name', 'category__name')
+    autocomplete_fields = ['brand', 'category']
     list_editable = ('price', 'active')
     
     def show_image(self, obj):
@@ -37,9 +61,9 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'customer', 'created_at', 'status', 'total', 'show_pdf')
+    list_display = ('id', 'customer', 'status', 'total', 'created_at', 'show_pdf')
     list_filter = ('status', 'created_at')
-    search_fields = ('customer__email', 'customer__dni')
+    search_fields = ('customer__email', 'customer__username')
     readonly_fields = ('created_at', 'total')
     inlines = [OrderItemInline]
     
@@ -47,3 +71,9 @@ class OrderAdmin(admin.ModelAdmin):
         return format_html('<a class="button" href="{}">Ver PDF</a>', 
                          f'/order/{obj.id}/pdf/')
     show_pdf.short_description = 'PDF'
+
+@admin.register(OrderItem)
+class OrderItemAdmin(admin.ModelAdmin):
+    list_display = ('order', 'product', 'quantity', 'price')
+    search_fields = ('order__id', 'product__name')
+    autocomplete_fields = ['order', 'product']

@@ -63,12 +63,8 @@ WSGI_APPLICATION = 'watchstore.wsgi.application'
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('POSTGRES_DB', 'watchstore'),
-        'USER': os.environ.get('POSTGRES_USER', 'watchstore'),
-        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'watchstore123'),
-        'HOST': 'db',
-        'PORT': '5432',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 

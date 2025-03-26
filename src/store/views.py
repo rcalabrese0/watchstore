@@ -1,14 +1,15 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse, JsonResponse
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from django.http import HttpResponse
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from io import BytesIO
 from .models import Customer, Product, Order, OrderItem
-from django.db.models import F, Sum
+from django.db.models import F, Sum, Q
 from decimal import Decimal
+from django.urls import reverse
 
 def is_admin_or_operator(user):
     return user.is_staff or user.is_superuser
@@ -90,10 +91,12 @@ def remove_from_cart(request, product_id):
 
 @login_required
 def create_order(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+        
     cart = request.session.get('cart', {})
     if not cart:
-        messages.error(request, 'El carrito está vacío')
-        return redirect('cart')
+        return JsonResponse({'error': 'El carrito está vacío'}, status=400)
     
     order = Order.objects.create(customer=request.user)
     total = Decimal('0')
@@ -112,11 +115,17 @@ def create_order(request):
     order.save()
     request.session['cart'] = {}
     
-    return redirect('order_pdf', order_id=order.id)
+    return JsonResponse({
+        'order_id': order.id,
+        'redirect_url': reverse('admin_orders') if request.user.is_staff else reverse('product_list')
+    })
 
 @login_required
 def order_pdf(request, order_id):
-    order = get_object_or_404(Order, id=order_id, customer=request.user)
+    if request.user.is_staff:
+        order = get_object_or_404(Order, id=order_id)
+    else:
+        order = get_object_or_404(Order, id=order_id, customer=request.user)
     
     buffer = BytesIO()
     p = canvas.Canvas(buffer, pagesize=letter)
@@ -142,8 +151,23 @@ def order_pdf(request, order_id):
 
 @user_passes_test(is_admin_or_operator)
 def admin_orders(request):
-    orders = Order.objects.all().order_by('-created_at')
-    return render(request, 'store/admin/orders.html', {'orders': orders})
+    orders = Order.objects.all()
+    
+    search_query = request.GET.get('q', '')
+    if search_query:
+        orders = orders.filter(
+            Q(id__icontains=search_query) |
+            Q(customer__email__icontains=search_query) |
+            Q(status__icontains=search_query) |
+            Q(total__icontains=search_query) |
+            Q(created_at__icontains=search_query)
+        )
+    
+    orders = orders.order_by('-created_at')
+    return render(request, 'store/admin/orders.html', {
+        'orders': orders,
+        'search_query': search_query
+    })
 
 @user_passes_test(is_admin_or_operator)
 def admin_update_order(request, order_id):
