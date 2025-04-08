@@ -1,0 +1,150 @@
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --accent-color: #e74c3c;
+    --text-color: #2c3e50;
+    --background-color: #f8f9fa;
+    --card-background: #ffffff;
+}
+
+/* General styles */
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+/* Header */
+#header {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#header a:link, #header a:visited {
+    color: white;
+}
+
+/* Breadcrumbs */
+.breadcrumbs {
+    background: var(--card-background);
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin: 20px 0;
+}
+
+/* Content */
+#content {
+    padding: 20px;
+}
+
+.module {
+    background: var(--card-background);
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    padding: 20px;
+}
+
+/* Tables */
+#changelist table {
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+#changelist table thead th {
+    background: var(--primary-color);
+    color: white;
+}
+
+.row1 {
+    background: var(--card-background);
+}
+
+.row2 {
+    background: var(--background-color);
+}
+
+/* Forms */
+.form-row {
+    padding: 15px 0;
+    border-bottom: 1px solid #eee;
+}
+
+input[type=text], input[type=password], input[type=email], textarea, select {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px;
+    width: 100%;
+    max-width: 500px;
+}
+
+/* Buttons */
+.button, input[type=submit], input[type=button], .submit-row input {
+    background: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.button:hover, input[type=submit]:hover, input[type=button]:hover, .submit-row input:hover {
+    background: var(--primary-color);
+}
+
+.deletelink {
+    background: var(--accent-color) !important;
+}
+
+/* Messages */
+.messagelist {
+    padding: 0;
+}
+
+.messagelist li {
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 4px;
+    border: none;
+}
+
+.messagelist li.success {
+    background: #2ecc71;
+    color: white;
+}
+
+.messagelist li.error {
+    background: var(--accent-color);
+    color: white;
+}
+
+/* Dashboard */
+.dashboard .module table {
+    width: 100%;
+}
+
+.dashboard .module caption {
+    background: var(--primary-color);
+    color: white;
+    padding: 10px;
+    border-radius: 5px 5px 0 0;
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+    #header {
+        padding: 10px;
+    }
+    
+    .module {
+        padding: 10px;
+    }
+    
+    input[type=text], input[type=password], input[type=email], textarea, select {
+        max-width: 100%;
+    }
+}

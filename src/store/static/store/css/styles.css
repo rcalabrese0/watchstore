@@ -1,0 +1,79 @@
+/* Estilos generales */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+/* Estilos para las tarjetas de productos */
+.product-image-container {
+    height: 200px;
+    overflow: hidden;
+    position: relative;
+    background-color: #f8f9fa;
+}
+
+.product-image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 1rem;
+}
+
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.card-text {
+    margin-bottom: 0.5rem;
+}
+
+.card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+/* Grid de productos */
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* Exactamente 4 columnas */
+    gap: 1.5rem;
+    padding: 1rem 0;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .products-grid {
+        grid-template-columns: repeat(3, 1fr); /* 3 columnas en tablets */
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .products-grid {
+        grid-template-columns: repeat(2, 1fr); /* 2 columnas en móvil */
+        gap: 1rem;
+    }
+    
+    .product-image-container {
+        height: 150px;
+    }
+}
+
+/* Toast notifications */
+.toast-container {
+    z-index: 9999;
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+}

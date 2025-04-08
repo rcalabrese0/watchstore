@@ -1,29 +1,158 @@
 {% extends 'store/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'store/css/styles.css' %}">
+{% endblock %}
 
 {% block title %}Productos{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">Nuestros Relojes</h2>
-
-<div class="row row-cols-1 row-cols-md-3 g-4">
-    {% for product in products %}
-    <div class="col">
-        <div class="card h-100">
-            {% if product.image %}
-                <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}">
-            {% endif %}
-            <div class="card-body">
-                <h5 class="card-title">{{ product.name }}</h5>
-                <p class="card-text">{{ product.description }}</p>
-                <p class="card-text"><strong>Precio: ${{ product.price }}</strong></p>
-                <a href="{% url 'add_to_cart' product.id %}" class="btn btn-primary">Agregar al Carrito</a>
+<div class="container">
+    <!-- Toast para notificaciones -->
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        <div id="cartToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto" id="toastTitle">Carrito</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
+            <div class="toast-body" id="toastMessage"></div>
         </div>
     </div>
-    {% empty %}
-    <div class="col-12">
-        <p class="text-center">No hay productos disponibles.</p>
+
+    <h2 class="mb-4">Nuestros Relojes</h2>
+
+    <div class="row row-cols-2 row-cols-md-4 g-4">
+        {% for product in products %}
+        <div class="col">
+            <div class="card h-100">
+                <div class="product-image-container">
+                    {% if product.image %}
+                        <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}">
+                    {% else %}
+                        <img src="{% static 'store/images/default-watch.jpg' %}" class="card-img-top" alt="Default Watch">
+                    {% endif %}
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">{{ product.name }}</h5>
+                    <p class="card-text">{{ product.description }}</p>
+                    <p class="card-text"><strong>Precio: ${{ product.price }}</strong></p>
+                    <p class="card-text"><small class="text-muted">Stock disponible: {{ product.stock }}</small></p>
+                    <div class="mt-auto">
+                        <button onclick="addToCart({{ product.id }}, this)" class="btn btn-primary w-100">
+                            <i class="fas fa-shopping-cart"></i> Agregar al Carrito
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                No hay productos disponibles.
+            </div>
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let toast;
+document.addEventListener('DOMContentLoaded', function() {
+    toast = new bootstrap.Toast(document.getElementById('cartToast'));
+});
+
+function showToast(title, message, type = 'success') {
+    const toastEl = document.getElementById('cartToast');
+    const titleEl = document.getElementById('toastTitle');
+    const messageEl = document.getElementById('toastMessage');
+    
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    
+    // Remover clases anteriores
+    toastEl.querySelector('.toast-header').className = 'toast-header';
+    
+    // Agregar clase según el tipo
+    if (type === 'success') {
+        toastEl.querySelector('.toast-header').classList.add('bg-success', 'text-white');
+    } else if (type === 'error') {
+        toastEl.querySelector('.toast-header').classList.add('bg-danger', 'text-white');
+    }
+    
+    toast.show();
+}
+
+function updateCartBadge(count) {
+    const cartLink = document.querySelector('a.nav-link[href*="cart"]');
+    if (cartLink) {
+        const badge = cartLink.querySelector('.badge');
+        if (badge) {
+            if (count > 0) {
+                badge.textContent = count;
+            } else {
+                badge.remove();
+            }
+        } else if (count > 0) {
+            cartLink.innerHTML = `Carrito <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">${count}</span>`;
+        }
+    }
+}
+
+function addToCart(productId, buttonElement) {
+    const button = buttonElement;
+    const originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Agregando...';
+
+    fetch(`/cart/add/${productId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            quantity: 1,
+            update: false
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Actualizar el contador del carrito
+            updateCartBadge(data.cart_count);
+            
+            // Mostrar toast de éxito
+            showToast('Éxito', data.message || 'Producto agregado al carrito', 'success');
+            
+            // Efecto visual en el botón
+            button.classList.remove('btn-primary');
+            button.classList.add('btn-success');
+            button.innerHTML = '<i class="fas fa-check"></i> Agregado';
+            
+            // Restaurar el botón después de 2 segundos
+            setTimeout(() => {
+                button.classList.remove('btn-success');
+                button.classList.add('btn-primary');
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }, 2000);
+        } else {
+            // Mostrar error
+            showToast('Error', data.error || 'Error al agregar al carrito', 'error');
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error', 'Error al agregar al carrito', 'error');
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+</script>
 {% endblock %}

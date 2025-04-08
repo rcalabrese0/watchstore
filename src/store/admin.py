@@ -42,11 +42,15 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'brand', 'category', 'price', 'stock', 'active', 'show_image')
+    list_display = ('name', 'brand', 'category', 'price', 'stock', 'display_order', 'active', 'show_image')
     list_filter = ('brand', 'category', 'active')
     search_fields = ('name', 'sku', 'brand__name', 'category__name')
     autocomplete_fields = ['brand', 'category']
-    list_editable = ('price', 'active')
+    list_editable = ('price', 'display_order', 'stock', 'active')
+    ordering = ('display_order', 'name')
+    list_per_page = 50
+    save_as = True
+    save_on_top = True
     
     def show_image(self, obj):
         if obj.image:

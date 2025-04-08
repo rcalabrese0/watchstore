@@ -53,6 +53,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.media',
+                'store.context_processors.cart_processor',
             ],
         },
     },
@@ -106,8 +107,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
+# Admin site customization
+ADMIN_SITE_HEADER = "Comercial La Plata Admin"
+ADMIN_SITE_TITLE = "Comercial La Plata Admin Portal"
+ADMIN_INDEX_TITLE = "Welcome to Comercial La Plata Admin"
+
 # Auth settings
 AUTH_USER_MODEL = 'store.Customer'
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'home'
+LOGIN_REDIRECT_URL = 'product_list'
 LOGOUT_REDIRECT_URL = 'login'
