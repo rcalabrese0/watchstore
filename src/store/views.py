@@ -3,14 +3,17 @@ from django.http import HttpResponse, JsonResponse, FileResponse
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
+from django.contrib.auth.forms import AuthenticationForm
+from django.db import transaction
+from django.utils import timezone
+from decimal import Decimal
+import json
+from io import BytesIO
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
-from io import BytesIO
 from .models import Customer, Product, Order, OrderItem
 from django.db.models import F, Sum, Q
-from decimal import Decimal
 from django.urls import reverse
-import json
 
 def is_admin_or_operator(user):
     return user.is_staff or user.is_superuser
@@ -73,9 +76,18 @@ def cart_view(request):
         })
         total += subtotal
     
+    # Calcular descuento si el usuario lo tiene habilitado
+    discount = Decimal('0')
+    final_total = total
+    if request.user.has_discount:
+        discount = total * Decimal('0.10')  # 10% de descuento
+        final_total = total - discount
+    
     return render(request, 'store/cart.html', {
         'cart_items': cart_items,
-        'total': total
+        'total': total,
+        'discount': discount,
+        'final_total': final_total
     })
 
 @login_required
@@ -95,7 +107,7 @@ def add_to_cart(request, product_id):
         if quantity > product.stock:
             return JsonResponse({
                 'success': False,
-                'error': f'Solo hay {product.stock} unidades disponibles'
+                'error': f'No hay stock disponible'
             })
         
         cart = request.session.get('cart', {})
@@ -147,6 +159,72 @@ def remove_from_cart(request, product_id):
             'error': 'El producto no está en el carrito'
         })
     except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+@login_required
+def checkout(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+    data = json.loads(request.body)
+    cart = request.session.get('cart', {})
+    
+    if not cart:
+        return JsonResponse({'success': False, 'error': 'El carrito está vacío'})
+
+    try:
+        order = Order.objects.create(
+            customer=request.user,  # El usuario ya es un Customer
+            observations=data.get('observations', ''),
+            shipping_method=data.get('shipping_method', ''),
+            target_customer=data.get('target_customer', '') if request.user.is_staff or request.user.role == 'seller' else None
+        )
+
+        total = Decimal('0')
+        for product_id, quantity in cart.items():
+            product = Product.objects.get(id=product_id)
+            if product.stock < quantity:
+                order.delete()
+                return JsonResponse({
+                    'success': False,
+                    'error': 'No hay stock suficiente'
+                })
+            
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                quantity=quantity,
+                price=product.price
+            )
+            
+            product.stock -= quantity
+            product.save()
+            
+            total += product.price * Decimal(str(quantity))
+
+        # Aplicar descuento si el cliente lo tiene habilitado
+        if request.user.has_discount:  # El usuario ya es un Customer
+            discount = total * Decimal('0.10')  # 10% de descuento
+            total = total - discount
+
+        order.total = total
+        order.save()
+        
+        # Limpiar el carrito
+        request.session['cart'] = {}
+        request.session.modified = True
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Pedido creado correctamente'
+        })
+
+    except Exception as e:
+        if 'order' in locals():
+            order.delete()
         return JsonResponse({
             'success': False,
             'error': str(e)
@@ -326,8 +404,26 @@ def order_pdf(request, order_id):
     
     # Total final
     p.setFont("Helvetica-Bold", 12)
-    p.drawString(400, y-20, "TOTAL FINAL:")
-    p.drawString(500, y-20, f"${order_total}")
+    
+    # Si el cliente tiene descuento, mostrarlo
+    if order.customer.has_discount:
+        p.drawString(350, y-20, "SUBTOTAL:")
+        p.drawString(500, y-20, f"${order_total}")
+        
+        # Calcular y mostrar el descuento
+        discount = order_total * Decimal('0.1')
+        final_total = order_total - discount
+        
+        p.drawString(350, y-40, "DESCUENTO (10%):")
+        p.drawString(500, y-40, f"-${discount}")
+        
+        p.drawString(350, y-60, "TOTAL FINAL:")
+        p.drawString(500, y-60, f"${final_total}")
+        y -= 80  # Ajustar el espacio para el pie de página
+    else:
+        p.drawString(400, y-20, "TOTAL FINAL:")
+        p.drawString(500, y-20, f"${order_total}")
+        y -= 40  # Ajustar el espacio para el pie de página
     
     # Pie de página
     p.setFont("Helvetica", 8)

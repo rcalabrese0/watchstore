@@ -1,5 +1,6 @@
 {% extends 'store/base.html' %}
 {% load static %}
+{% load store_filters %}
 
 {% block title %}Carrito{% endblock %}
 
@@ -30,6 +31,40 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-danger" id="confirmModalAction">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación de Pedido -->
+    <div class="modal fade" id="confirmOrderModal" tabindex="-1" aria-labelledby="confirmOrderModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmOrderModalLabel">Confirmar Pedido</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="orderForm">
+                        {% if user.is_staff or user.role == 'seller' %}
+                        <div class="mb-3">
+                            <label for="targetCustomer" class="form-label">Cliente</label>
+                            <input type="text" class="form-control" id="targetCustomer" name="targetCustomer" required>
+                        </div>
+                        {% endif %}
+                        <div class="mb-3">
+                            <label for="observations" class="form-label">Observaciones</label>
+                            <textarea class="form-control" id="observations" name="observations" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="shippingMethod" class="form-label">Medio de transporte</label>
+                            <input type="text" class="form-control" id="shippingMethod" name="shippingMethod" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="submitOrder()">Confirmar Pedido</button>
                 </div>
             </div>
         </div>
@@ -85,9 +120,28 @@
             </tfoot>
         </table>
     </div>
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Total del Carrito</h5>
+            <p class="card-text">
+                Subtotal: $<span id="cartTotal">{{ total }}</span>
+                {% if user.has_discount %}
+                <br>
+                <span class="text-success">
+                    Descuento (10%): -$<span id="discount">{{ discount }}</span>
+                </span>
+                <br>
+                <strong>Total con descuento: $<span id="finalTotal">{{ final_total }}</span></strong>
+                {% else %}
+                <br>
+                <strong>Total: $<span id="finalTotal">{{ total }}</span></strong>
+                {% endif %}
+            </p>
+        </div>
+    </div>
     <div class="text-end mt-3">
         <a href="{% url 'product_list' %}" class="btn btn-secondary me-2">Seguir Comprando</a>
-        <button class="btn btn-success" onclick="createOrder()">Realizar Pedido</button>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#confirmOrderModal">Realizar Pedido</button>
     </div>
     {% else %}
     <div class="alert alert-info">
@@ -164,7 +218,7 @@ function updateQuantity(productId, amount, isDirectInput = false) {
         return;
     } else if (newQty > maxStock) {
         newQty = maxStock;
-        showToast('Stock insuficiente', `Solo hay ${maxStock} unidades disponibles`, 'error');
+        showToast('Stock insuficiente', `No hay stock disponible`, 'error');
         input.value = newQty;
         return;
     }
@@ -225,27 +279,49 @@ function removeFromCart(productId) {
     });
 }
 
-function createOrder() {
-    fetch('/order/create/', {
+function submitOrder() {
+    const formData = {
+        observations: document.getElementById('observations').value,
+        shipping_method: document.getElementById('shippingMethod').value
+    };
+
+    if (document.getElementById('targetCustomer')) {
+        formData.target_customer = document.getElementById('targetCustomer').value;
+    }
+
+    fetch('/cart/checkout/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}',
-            'X-Requested-With': 'XMLHttpRequest'
-        }
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify(formData)
     })
     .then(response => response.json())
     .then(data => {
-        if (data.redirect_url) {
-            window.location.href = data.redirect_url;
+        if (data.success) {
+            showToast('Éxito', 'Pedido realizado correctamente', 'success');
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
         } else {
-            showToast('Error', 'Error al crear el pedido', 'error');
+            showToast('Error', data.error || 'Error al procesar el pedido', 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        showToast('Error', 'Error al crear el pedido', 'error');
+        showToast('Error', 'Error al procesar el pedido', 'error');
     });
 }
+
+// Cuando el documento esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    const checkoutButton = document.querySelector('button[onclick="createOrder()"]');
+    if (checkoutButton) {
+        checkoutButton.setAttribute('data-bs-toggle', 'modal');
+        checkoutButton.setAttribute('data-bs-target', '#confirmOrderModal');
+        checkoutButton.removeAttribute('onclick');
+    }
+});
 </script>
 {% endblock %}

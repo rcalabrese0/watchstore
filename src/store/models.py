@@ -3,12 +3,30 @@ from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 
 class Customer(AbstractUser):
-    dni = models.CharField(max_length=20, unique=True)
-    phone = models.CharField(max_length=20, blank=True)
-    address = models.TextField(blank=True)
+    ROLE_CHOICES = [
+        ('admin', 'Administrador'),
+        ('seller', 'Vendedor'),
+        ('customer', 'Cliente'),
+    ]
+    
+    username = None  # Deshabilitamos el campo username
+    email = models.EmailField(unique=True)
+    dni = models.CharField(max_length=20, unique=True, verbose_name='DNI')
+    phone = models.CharField(max_length=20, blank=True, null=True, verbose_name='Teléfono')
+    address = models.TextField(blank=True, null=True, verbose_name='Dirección')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='customer', verbose_name='Rol')
+    has_discount = models.BooleanField(default=False, verbose_name='Tiene descuento')
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['dni']
 
     class Meta:
         db_table = 'customer'
+        verbose_name = 'Cliente'
+        verbose_name_plural = 'Clientes'
+
+    def __str__(self):
+        return self.email
 
 class Brand(models.Model):
     name = models.CharField(max_length=100)
@@ -63,18 +81,27 @@ class Product(models.Model):
 class Order(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pendiente'),
-        ('in_process', 'En Proceso'),
-        ('completed', 'Terminado'),
+        ('processing', 'En Proceso'),
+        ('shipped', 'Enviado'),
+        ('delivered', 'Entregado'),
+        ('cancelled', 'Cancelado'),
     ]
-    
+
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    observations = models.TextField(blank=True, null=True, verbose_name='Observaciones')
+    shipping_method = models.CharField(max_length=100, verbose_name='Medio de transporte', default='Retiro en tienda')
+    target_customer = models.CharField(max_length=255, blank=True, null=True, verbose_name='Cliente')
+
+    class Meta:
+        verbose_name = 'Pedido'
+        verbose_name_plural = 'Pedidos'
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f"Orden #{self.id} - {self.customer.email}"
+        return f"Pedido #{self.id} - {self.customer.email}"
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)

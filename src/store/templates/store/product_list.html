@@ -20,6 +20,33 @@
         </div>
     </div>
 
+    <!-- Modal para seleccionar cantidad -->
+    <div class="modal fade" id="quantityModal" tabindex="-1" aria-labelledby="quantityModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="quantityModalLabel">Seleccionar Cantidad</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label">Cantidad:</label>
+                        <div class="input-group">
+                            <button class="btn btn-outline-secondary" type="button" onclick="decrementQuantity()">-</button>
+                            <input type="number" class="form-control text-center" id="quantity" value="1" min="1">
+                            <button class="btn btn-outline-secondary" type="button" onclick="incrementQuantity()">+</button>
+                        </div>
+                        <small id="stockInfo" class="form-text text-muted"></small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmAddToCart()">Agregar al Carrito</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <h2 class="mb-4">Nuestros Relojes</h2>
 
     <div class="row row-cols-2 row-cols-md-4 g-4">
@@ -37,9 +64,9 @@
                     <h5 class="card-title">{{ product.name }}</h5>
                     <p class="card-text">{{ product.description }}</p>
                     <p class="card-text"><strong>Precio: ${{ product.price }}</strong></p>
-                    <p class="card-text"><small class="text-muted">Stock disponible: {{ product.stock }}</small></p>
+                    <!-- <p class="card-text"><small class="text-muted">Stock disponible: {{ product.stock }}</small></p> -->
                     <div class="mt-auto">
-                        <button onclick="addToCart({{ product.id }}, this)" class="btn btn-primary w-100">
+                        <button onclick="showQuantityModal({{ product.id }}, {{ product.stock }}, '{{ product.name }}')" class="btn btn-primary w-100">
                             <i class="fas fa-shopping-cart"></i> Agregar al Carrito
                         </button>
                     </div>
@@ -60,9 +87,69 @@
 {% block extra_js %}
 <script>
 let toast;
+let quantityModal;
+let currentProductId;
+let currentProductStock;
+
 document.addEventListener('DOMContentLoaded', function() {
     toast = new bootstrap.Toast(document.getElementById('cartToast'));
+    quantityModal = new bootstrap.Modal(document.getElementById('quantityModal'));
+    
+    // Prevenir valores negativos en el input
+    document.getElementById('quantity').addEventListener('input', function(e) {
+        let value = parseInt(this.value) || 0;
+        if (value < 1) this.value = 1;
+        if (value > currentProductStock) this.value = currentProductStock;
+    });
 });
+
+function showQuantityModal(productId, stock, productName) {
+    currentProductId = productId;
+    currentProductStock = stock;
+    
+    // Actualizar título del modal
+    document.getElementById('quantityModalLabel').textContent = `Agregar "${productName}" al carrito`;
+    
+    // Actualizar información de stock
+    document.getElementById('stockInfo').textContent = `Stock disponible: ${stock} unidades`;
+    
+    // Resetear cantidad a 1
+    document.getElementById('quantity').value = 1;
+    
+    // Mostrar modal
+    quantityModal.show();
+}
+
+function incrementQuantity() {
+    const input = document.getElementById('quantity');
+    const currentValue = parseInt(input.value) || 0;
+    if (currentValue < currentProductStock) {
+        input.value = currentValue + 1;
+    }
+}
+
+function decrementQuantity() {
+    const input = document.getElementById('quantity');
+    const currentValue = parseInt(input.value) || 0;
+    if (currentValue > 1) {
+        input.value = currentValue - 1;
+    }
+}
+
+function confirmAddToCart() {
+    const quantity = parseInt(document.getElementById('quantity').value) || 1;
+    
+    // Ocultar modal
+    quantityModal.hide();
+    
+    // Obtener el botón original
+    const button = document.querySelector(`button[onclick*="showQuantityModal(${currentProductId},"]`);
+    const originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Agregando...';
+
+    addToCart(currentProductId, quantity, button, originalText);
+}
 
 function showToast(title, message, type = 'success') {
     const toastEl = document.getElementById('cartToast');
@@ -101,12 +188,7 @@ function updateCartBadge(count) {
     }
 }
 
-function addToCart(productId, buttonElement) {
-    const button = buttonElement;
-    const originalText = button.innerHTML;
-    button.disabled = true;
-    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Agregando...';
-
+function addToCart(productId, quantity, button, originalText) {
     fetch(`/cart/add/${productId}/`, {
         method: 'POST',
         headers: {
@@ -115,7 +197,7 @@ function addToCart(productId, buttonElement) {
             'X-Requested-With': 'XMLHttpRequest'
         },
         body: JSON.stringify({
-            quantity: 1,
+            quantity: quantity,
             update: false
         })
     })
@@ -126,7 +208,7 @@ function addToCart(productId, buttonElement) {
             updateCartBadge(data.cart_count);
             
             // Mostrar toast de éxito
-            showToast('Éxito', data.message || 'Producto agregado al carrito', 'success');
+            showToast('Éxito', data.message || `${quantity} unidad(es) agregadas al carrito`, 'success');
             
             // Efecto visual en el botón
             button.classList.remove('btn-primary');

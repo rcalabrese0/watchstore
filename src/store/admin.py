@@ -1,21 +1,39 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from import_export import resources
+from import_export.admin import ImportExportModelAdmin
 from .models import Customer, Product, Order, OrderItem, Brand, Category
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('username', 'email', 'dni', 'is_staff')
-    search_fields = ('username', 'email', 'dni')
-    list_filter = ('is_staff', 'is_active', 'date_joined')
-    ordering = ('-date_joined',)
+    list_display = ('email', 'first_name', 'last_name', 'phone', 'role', 'has_discount')
+    list_filter = ('role', 'has_discount', 'is_active')
+    search_fields = ('email', 'first_name', 'last_name', 'phone', 'dni')
     fieldsets = (
         ('Información Personal', {
-            'fields': ('email', 'dni', 'phone', 'address')
+            'fields': ('email', 'password', 'first_name', 'last_name', 'dni', 'phone', 'address')
+        }),
+        ('Configuración', {
+            'fields': ('role', 'has_discount', 'is_active')
         }),
         ('Permisos', {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')
+            'fields': ('is_staff', 'is_superuser', 'groups', 'user_permissions'),
+            'classes': ('collapse',)
         }),
     )
+
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = super().get_fieldsets(request, obj)
+        if not obj:  # Si es un nuevo usuario
+            fieldsets = (
+                ('Información Personal', {
+                    'fields': ('email', 'password1', 'password2', 'first_name', 'last_name', 'dni', 'phone', 'address')
+                }),
+                ('Configuración', {
+                    'fields': ('role', 'has_discount', 'is_active')
+                }),
+            )
+        return fieldsets
 
 @admin.register(Brand)
 class BrandAdmin(admin.ModelAdmin):
@@ -40,8 +58,26 @@ class CategoryAdmin(admin.ModelAdmin):
                 )
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
-@admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
+class ProductResource(resources.ModelResource):
+    class Meta:
+        model = Product
+        import_id_fields = ['id']
+        fields = ('id', 'name', 'brand', 'category', 'price', 'stock', 'display_order')
+
+class OrderItemResource(resources.ModelResource):
+    class Meta:
+        model = OrderItem
+        import_id_fields = ['id']
+        fields = ('id', 'order', 'product', 'quantity', 'price')
+
+class OrderResource(resources.ModelResource):
+    class Meta:
+        model = Order
+        import_id_fields = ['id']
+        fields = ('id', 'customer', 'created_at', 'status', 'total')
+
+class ProductAdmin(ImportExportModelAdmin):
+    resource_class = ProductResource
     list_display = ('name', 'brand', 'category', 'price', 'stock', 'display_order', 'active', 'show_image')
     list_filter = ('brand', 'category', 'active')
     search_fields = ('name', 'sku', 'brand__name', 'category__name')
@@ -63,8 +99,8 @@ class OrderItemInline(admin.TabularInline):
     extra = 0
     readonly_fields = ('price',)
 
-@admin.register(Order)
-class OrderAdmin(admin.ModelAdmin):
+class OrderAdmin(ImportExportModelAdmin):
+    resource_class = OrderResource
     list_display = ('id', 'customer', 'status', 'total', 'created_at', 'show_pdf')
     list_filter = ('status', 'created_at')
     search_fields = ('customer__email', 'customer__username')
@@ -76,8 +112,12 @@ class OrderAdmin(admin.ModelAdmin):
                          f'/order/{obj.id}/pdf/')
     show_pdf.short_description = 'PDF'
 
-@admin.register(OrderItem)
-class OrderItemAdmin(admin.ModelAdmin):
+class OrderItemAdmin(ImportExportModelAdmin):
+    resource_class = OrderItemResource
     list_display = ('order', 'product', 'quantity', 'price')
     search_fields = ('order__id', 'product__name')
     autocomplete_fields = ['order', 'product']
+
+admin.site.register(Product, ProductAdmin)
+admin.site.register(Order, OrderAdmin)
+admin.site.register(OrderItem, OrderItemAdmin)
