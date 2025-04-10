@@ -316,31 +316,33 @@ def order_pdf(request, order_id):
     p.drawString(50, 670, f"Número de Orden: #{order.id}")
     p.drawString(50, 655, f"Fecha: {order.created_at.strftime('%d/%m/%Y %H:%M')}")
     p.drawString(50, 640, f"Cliente: {order.customer.email}")
+    p.drawString(50, 625, f"Observaciones: {order.observations if order.observations else ''}")
+    p.drawString(50, 610, f"Medio de transporte: {order.shipping_method if order.shipping_method else ''}")
     
     # Línea separadora
-    p.line(50, 625, 550, 625)
+    p.line(50, 595, 550, 595)
     
     # Encabezados de la tabla
     p.setFont("Helvetica-Bold", 10)
-    p.drawString(50, 605, "PRODUCTO")
-    p.drawString(300, 605, "CANTIDAD")
-    p.drawString(400, 605, "PRECIO UNIT.")
-    p.drawString(500, 605, "SUBTOTAL")
+    p.drawString(50, 580, "PRODUCTO")
+    p.drawString(300, 580, "CANTIDAD")
+    p.drawString(400, 580, "PRECIO UNIT.")
+    p.drawString(500, 580, "SUBTOTAL")
     
     # Línea separadora
-    p.line(50, 600, 550, 600)
+    p.line(50, 575, 550, 575)
     
     # Agrupar items por marca
     items_by_brand = {}
     for item in order.items.all():
-        brand_name = item.product.brand.name
+        brand_name = item.product.brand.name if item.product.brand else " "
         if brand_name not in items_by_brand:
             items_by_brand[brand_name] = []
         items_by_brand[brand_name].append(item)
     
     # Contenido de la tabla agrupado por marca
     p.setFont("Helvetica", 10)
-    y = 580
+    y = 560
     order_total = 0
     
     for brand_name, items in items_by_brand.items():
@@ -389,14 +391,14 @@ def order_pdf(request, order_id):
             
             p.drawString(70, y, item.product.name[:35])  # Indentado para mostrar que pertenece a la marca
             p.drawString(300, y, str(item.quantity))
-            p.drawString(400, y, f"${item.price}")
-            p.drawString(500, y, f"${subtotal}")
+            p.drawString(400, y, f"${item.price:.2f}")
+            p.drawString(500, y, f"${subtotal:.2f}")
             y -= 20
         
         # Subtotal por marca
         p.setFont("Helvetica-Bold", 10)
         p.drawString(380, y, f"Subtotal {brand_name}:")
-        p.drawString(500, y, f"${brand_total}")
+        p.drawString(500, y, f"${brand_total:.2f}")
         y -= 30  # Espacio extra entre marcas
     
     # Línea separadora antes del total
@@ -408,21 +410,21 @@ def order_pdf(request, order_id):
     # Si el cliente tiene descuento, mostrarlo
     if order.customer.has_discount:
         p.drawString(350, y-20, "SUBTOTAL:")
-        p.drawString(500, y-20, f"${order_total}")
+        p.drawString(500, y-20, f"${order_total:.2f}")
         
         # Calcular y mostrar el descuento
         discount = order_total * Decimal('0.1')
         final_total = order_total - discount
         
         p.drawString(350, y-40, "DESCUENTO (10%):")
-        p.drawString(500, y-40, f"-${discount}")
+        p.drawString(500, y-40, f"-${discount:.2f}")
         
         p.drawString(350, y-60, "TOTAL FINAL:")
-        p.drawString(500, y-60, f"${final_total}")
+        p.drawString(500, y-60, f"${final_total:.2f}")
         y -= 80  # Ajustar el espacio para el pie de página
     else:
         p.drawString(400, y-20, "TOTAL FINAL:")
-        p.drawString(500, y-20, f"${order_total}")
+        p.drawString(500, y-20, f"${order_total:.2f}")
         y -= 40  # Ajustar el espacio para el pie de página
     
     # Pie de página
